@@ -81,7 +81,18 @@ function AuthProviderInner({ children }: { children: ReactNode }) {
   }
 
   const resetPassword = async (email: string) => {
-    return { success: false, error: 'Password reset not implemented yet' }
+    try {
+      const response = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+
+      const result = await response.json()
+      return result
+    } catch (err) {
+      return { success: false, error: 'An unexpected error occurred' }
+    }
   }
 
   const value: AuthContextType = {

@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     }
 
     const users = await sql`
-      SELECT id, email, password, created_at
+      SELECT id, email, password, created_at, email_verified
       FROM users
       WHERE email = ${email}
       LIMIT 1
@@ -48,6 +48,15 @@ export async function POST(request: NextRequest) {
     }
 
     const user = users[0]
+    
+    // Check if email is verified
+    if (!user.email_verified) {
+      return NextResponse.json(
+        { error: 'Please verify your email before logging in. Check your inbox for the verification link.' },
+        { status: 401 }
+      )
+    }
+    
     const ok = await bcrypt.compare(password, user.password)
     if (!ok) {
       return NextResponse.json(
@@ -80,6 +89,7 @@ export async function POST(request: NextRequest) {
       user: {
         id: user.id.toString(),
         email: user.email,
+        email_verified: user.email_verified,
         created_at: user.created_at,
       },
     })

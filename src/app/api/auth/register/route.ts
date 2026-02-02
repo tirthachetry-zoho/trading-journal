@@ -3,6 +3,7 @@ import { sql } from '@/lib/neon'
 import bcrypt from 'bcryptjs'
 import type { RegisterCredentials } from '@/types/auth'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
+import { sendEmail, generateVerificationToken, getTokenExpiration } from '@/lib/email'
 
 export async function POST(request: NextRequest) {
   try {
@@ -52,18 +53,41 @@ export async function POST(request: NextRequest) {
 
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10)
+    
+    // Generate email verification token
+    const verificationToken = generateVerificationToken()
+    const verificationExpires = getTokenExpiration(24) // 24 hours
 
-    // Create new user
+    // Create new user with verification token
     const result = await sql`
-      INSERT INTO users (email, password) 
-      VALUES (${email}, ${hashedPassword}) 
-      RETURNING id, email
+      INSERT INTO users (email, password, email_verification_token, email_verification_expires) 
+      VALUES (${email}, ${hashedPassword}, ${verificationToken}, ${verificationExpires}) 
+      RETURNING id, email, email_verified
     `
+    
+    const user = result[0]
+
+    // Send verification email
+    const verificationUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/verify-email?token=${verificationToken}`
+    await sendEmail(
+      email,
+      'Verify your email address',
+      `
+        <h2>Welcome to Trading Journal!</h2>
+        <p>Thank you for signing up. Please verify your email address by clicking the link below:</p>
+        <a href="${verificationUrl}" style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block; margin: 16px 0;">
+          Verify Email
+        </a>
+        <p>Or copy and paste this link into your browser:</p>
+        <p>${verificationUrl}</p>
+        <p>This link will expire in 24 hours.</p>
+      `
+    )
 
     return NextResponse.json({
       success: true,
-      user: result[0],
-      message: 'Account created successfully'
+      user: { id: user.id, email: user.email, email_verified: user.email_verified },
+      message: 'Account created successfully. Please check your email to verify your account.'
     })
   } catch (error) {
     console.error('Registration error:', error)
