@@ -1,36 +1,98 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Trading Journal
 
-## Getting Started
+A simple, open-source trading journal built with Next.js and NeonDB. Track trades, analyze performance, and improve your strategy.
 
-First, run the development server:
+## Quick Start
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+1. Set up NeonDB and get your `DATABASE_URL`
+2. Create `.env.local`:
+   ```env
+   DATABASE_URL=your-neon-database-url
+   JWT_SECRET=a-random-jwt-secret
+   ```
+3. Install: `npm install`
+4. Set up database:
+   ```bash
+   curl -X POST http://localhost:3000/api/setup-db
+   ```
+5. Run: `npm run dev`
+6. Open http://localhost:3000
+
+## Deploy to Vercel
+
+1. Push this repo to GitHub
+2. Import the repo in Vercel
+3. Set environment variables in Vercel:
+   - `DATABASE_URL`
+   - `JWT_SECRET`
+4. Deploy
+
+Notes:
+- Auth uses a JWT stored in an **HttpOnly cookie** (`tj_token`).
+- Cookies are marked `Secure` automatically in production.
+
+## Features
+
+- Trade journal with P&L calculation
+- Analytics dashboard with charts
+- Loss/profit reason tracking
+- Daily trades drill-down
+- SEBI guidelines
+- Dark mode
+- Mobile responsive
+
+## Tech Stack
+
+- Frontend: Next.js, React, TypeScript, Tailwind CSS
+- Backend: Next.js API Routes
+- Database: NeonDB (PostgreSQL)
+- Auth: JWT
+- Charts: Recharts
+
+## Database Schema
+
+```sql
+CREATE TABLE users (
+  id SERIAL PRIMARY KEY,
+  email VARCHAR(255) UNIQUE NOT NULL,
+  password VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE trades (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  trade_date DATE NOT NULL,
+  symbol VARCHAR(50) NOT NULL,
+  exchange VARCHAR(50) NOT NULL,
+  instrument VARCHAR(50) NOT NULL,
+  side VARCHAR(10) NOT NULL CHECK (side IN ('BUY', 'SELL')),
+  quantity INTEGER NOT NULL,
+  entry_price DECIMAL(10, 2) NOT NULL,
+  exit_price DECIMAL(10, 2) NOT NULL,
+  charges DECIMAL(10, 2) DEFAULT 0,
+  notes TEXT,
+  loss_reason TEXT,
+  profit_reason TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Development
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm install
+npm run dev
+npm run build
+npm start
+npm run lint
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## License
 
-## Learn More
+MIT License
 
-To learn more about Next.js, take a look at the following resources:
+## Developer
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+https://github.com/tirthachetry-zoho
