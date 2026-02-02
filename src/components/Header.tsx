@@ -24,14 +24,14 @@ export function Header({ onMenuToggle, showMenu }: HeaderProps) {
   }
 
   return (
-    <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+    <header className="bg-white border-b border-gray-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center gap-4">
             {onMenuToggle && (
               <button
                 onClick={onMenuToggle}
-                className="p-2 rounded-md text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white lg:hidden"
+                className="p-2 rounded-md text-gray-600 hover:text-gray-900 lg:hidden"
               >
                 {showMenu ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
               </button>
@@ -44,7 +44,7 @@ export function Header({ onMenuToggle, showMenu }: HeaderProps) {
               <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
                 <BarChart3 className="w-6 h-6 text-white" />
               </div>
-              <span className="text-xl font-bold text-gray-900 dark:text-white">Trading Journal</span>
+              <span className="text-xl font-bold text-gray-900">Trading Journal</span>
             </button>
           </div>
 
@@ -52,7 +52,7 @@ export function Header({ onMenuToggle, showMenu }: HeaderProps) {
             <div className="relative">
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
-                className="flex items-center gap-2 p-2 rounded-md text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                className="flex items-center gap-2 p-2 rounded-md text-gray-600 hover:text-gray-900 transition-colors"
               >
                 <User className="w-5 h-5" />
                 <span className="hidden sm:block text-sm font-medium">
@@ -61,26 +61,26 @@ export function Header({ onMenuToggle, showMenu }: HeaderProps) {
               </button>
 
               {showUserMenu && (
-                <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50">
-                  <div className="p-3 border-b border-gray-200 dark:border-gray-700">
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                  <div className="p-3 border-b border-gray-200">
+                    <p className="text-sm font-medium text-gray-900">
                       {user?.email}
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                    <p className="text-xs text-gray-500">
                       Member since {new Date(user?.created_at || '').toLocaleDateString()}
                     </p>
                   </div>
                   <div className="p-1">
                     <button
                       onClick={goToLanding}
-                      className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+                      className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
                     >
                       <Home className="w-4 h-4" />
                       Landing Page
                     </button>
                     <button
                       onClick={handleLogout}
-                      className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+                      className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
                     >
                       <LogOut className="w-4 h-4" />
                       Sign Out

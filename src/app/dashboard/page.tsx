@@ -181,9 +181,9 @@ export default function Dashboard() {
         </div>
 
         {!dbInitialized && (
-          <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+          <div className="text-center py-8 text-gray-500">
             <div className="flex items-center justify-center mb-4">
-              <div className="w-8 h-8 border-2 border-gray-300 dark:border-gray-600 rounded-full flex items-center justify-center">
+              <div className="w-8 h-8 border-2 border-gray-300 rounded-full flex items-center justify-center">
                 <span className="text-2xl">🔄</span>
               </div>
             </div>
@@ -194,11 +194,11 @@ export default function Dashboard() {
         {dbInitialized === 'error' && (
           <div className="text-center py-8">
             <div className="max-w-2xl mx-auto">
-              <h2 className="text-2xl font-bold text-red-600 dark:text-red-400 mb-4">
+              <h2 className="text-2xl font-bold text-red-600 mb-4">
                 Database Connection Error
               </h2>
-              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6">
-                <p className="text-red-800 dark:text-red-200 mb-4">
+              <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+                <p className="text-red-800 mb-4">
                   Could not connect to your database. Please check your setup.
                 </p>
               </div>
@@ -215,7 +215,7 @@ export default function Dashboard() {
         {dbInitialized === true && (
           <>
             <div className="flex justify-between items-center mb-6">
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
+              <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
               <button
                 onClick={handleAddTrade}
                 className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
