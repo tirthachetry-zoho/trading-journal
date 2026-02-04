@@ -7,6 +7,7 @@ import { TradeHistory } from '@/components/TradeHistory'
 import { AnalyticsDashboard } from '@/components/AnalyticsDashboard'
 import { RuleBasedInsights } from '@/components/RuleBasedInsights'
 import { SEBIGuidelines } from '@/components/SEBIGuidelines'
+import { NoTradeDayIndicator } from '@/components/NoTradeDayIndicator'
 import { Header } from '@/components/Header'
 import { useAuth } from '@/contexts/AuthContext'
 import type { TradeFormData } from '@/types/trade'
@@ -214,6 +215,8 @@ export default function Dashboard() {
 
         {dbInitialized === true && (
           <>
+            <NoTradeDayIndicator />
+            
             <div className="flex justify-between items-center mb-6">
               <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
               <button

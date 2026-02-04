@@ -37,10 +37,25 @@ export async function POST() {
       )
     `
     
+    // Create no_trade_days table
+    await sql`
+      CREATE TABLE IF NOT EXISTS no_trade_days (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        trade_date DATE NOT NULL,
+        reason VARCHAR(255) DEFAULT 'No trades executed today',
+        auto_created BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(user_id, trade_date)
+      )
+    `
+    
     // Create indexes
     await sql`CREATE INDEX IF NOT EXISTS idx_trades_user_id ON trades(user_id)`
     await sql`CREATE INDEX IF NOT EXISTS idx_trades_date ON trades(trade_date)`
     await sql`CREATE INDEX IF NOT EXISTS idx_trades_symbol ON trades(symbol)`
+    await sql`CREATE INDEX IF NOT EXISTS idx_no_trade_days_user_id ON no_trade_days(user_id)`
+    await sql`CREATE INDEX IF NOT EXISTS idx_no_trade_days_date ON no_trade_days(trade_date)`
     
     console.log('Database setup completed successfully!')
     

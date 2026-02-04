@@ -3,11 +3,6 @@ CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
   email VARCHAR(255) UNIQUE NOT NULL,
   password VARCHAR(255) NOT NULL,
-  email_verified BOOLEAN DEFAULT FALSE,
-  email_verification_token VARCHAR(255),
-  email_verification_expires TIMESTAMP,
-  password_reset_token VARCHAR(255),
-  password_reset_expires TIMESTAMP,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -31,7 +26,20 @@ CREATE TABLE IF NOT EXISTS trades (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- No Trade Days table (for tracking automatic no-trade-day entries)
+CREATE TABLE IF NOT EXISTS no_trade_days (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  trade_date DATE NOT NULL,
+  reason VARCHAR(255) DEFAULT 'No trades executed today',
+  auto_created BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(user_id, trade_date)
+);
+
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_trades_user_id ON trades(user_id);
 CREATE INDEX IF NOT EXISTS idx_trades_date ON trades(trade_date);
 CREATE INDEX IF NOT EXISTS idx_trades_symbol ON trades(symbol);
+CREATE INDEX IF NOT EXISTS idx_no_trade_days_user_id ON no_trade_days(user_id);
+CREATE INDEX IF NOT EXISTS idx_no_trade_days_date ON no_trade_days(trade_date);
