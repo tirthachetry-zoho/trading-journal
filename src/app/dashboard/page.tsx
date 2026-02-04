@@ -15,17 +15,20 @@ import type { TradeFormData } from '@/types/trade'
 interface Trade {
   id: string
   trade_date: string
-  symbol: string
-  exchange: string
-  instrument: string
-  side: string
-  quantity: number
-  entry_price: number | string
-  exit_price: number | string
-  charges: number | string
+  symbol?: string
+  exchange?: string
+  instrument?: string
+  side?: string
+  quantity?: number
+  entry_price?: number | string
+  exit_price?: number | string
+  charges?: number | string
   notes?: string
   loss_reason?: string
   profit_reason?: string
+  type?: 'trade' | 'no_trade_day'
+  reason?: string
+  auto_created?: boolean
 }
 
 export default function Dashboard() {
@@ -70,18 +73,23 @@ export default function Dashboard() {
   }
 
   const handleEditTrade = (trade: Trade) => {
+    // Only allow editing actual trades, not no-trade days
+    if (trade.type === 'no_trade_day') {
+      return
+    }
+    
     // Convert snake_case to camelCase for the form
     const camelCaseTrade = {
       id: trade.id,
       tradeDate: trade.trade_date,
-      symbol: trade.symbol,
-      exchange: trade.exchange,
-      instrument: trade.instrument,
-      side: trade.side,
-      quantity: trade.quantity.toString(),
-      entryPrice: trade.entry_price.toString(),
-      exitPrice: trade.exit_price.toString(),
-      charges: trade.charges.toString(),
+      symbol: trade.symbol || '',
+      exchange: trade.exchange || '',
+      instrument: trade.instrument || '',
+      side: trade.side || '',
+      quantity: trade.quantity?.toString() || '',
+      entryPrice: trade.entry_price?.toString() || '',
+      exitPrice: trade.exit_price?.toString() || '',
+      charges: trade.charges?.toString() || '',
       notes: trade.notes || '',
       lossReason: trade.loss_reason || '',
       profitReason: trade.profit_reason || '',

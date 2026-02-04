@@ -1,24 +1,28 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ArrowUpDown, Filter, Download, Edit2, Trash2 } from 'lucide-react'
+import { ArrowUpDown, Filter, Download, Edit2, Trash2, Calendar, TrendingUp, TrendingDown } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { cn } from '@/lib/utils'
+import { StreakInsights } from '@/components/StreakInsights'
 
 interface Trade {
   id: string
   trade_date: string
-  symbol: string
-  exchange: string
-  instrument: string
-  side: string
-  quantity: number
-  entry_price: number | string
-  exit_price: number | string
-  charges: number | string
+  symbol?: string
+  exchange?: string
+  instrument?: string
+  side?: string
+  quantity?: number
+  entry_price?: number | string
+  exit_price?: number | string
+  charges?: number | string
   notes?: string
   loss_reason?: string
   profit_reason?: string
+  type: 'trade' | 'no_trade_day'
+  reason?: string
+  auto_created?: boolean
 }
 
 interface TradeFilters {
@@ -41,6 +45,8 @@ export function TradeHistory({ onEditTrade, refreshTrigger }: TradeHistoryProps)
   const [showFilters, setShowFilters] = useState(false)
   const [sortField, setSortField] = useState<keyof Trade>('trade_date')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
+  const [streaks, setStreaks] = useState<any>(null)
+  const [showInsights, setShowInsights] = useState(false)
 
   useEffect(() => {
     const fetchTrades = async () => {
@@ -53,10 +59,11 @@ export function TradeHistory({ onEditTrade, refreshTrigger }: TradeHistoryProps)
         if (filters.symbol) params.append('symbol', filters.symbol)
         if (filters.exchange) params.append('exchange', filters.exchange)
 
-        const response = await fetch(`/api/trades?${params.toString()}`, { credentials: 'include' })
+        const response = await fetch(`/api/trades/combined?${params.toString()}`, { credentials: 'include' })
         if (response.ok) {
           const data = await response.json()
-          setTrades(data)
+          setTrades(data.data.items)
+          setStreaks(data.data.streaks)
         }
       } catch (error) {
         console.error('Error fetching trades:', error)
@@ -95,39 +102,61 @@ export function TradeHistory({ onEditTrade, refreshTrigger }: TradeHistoryProps)
   })
 
   const calculatePL = (trade: Trade) => {
+    if (trade.type !== 'trade' || !trade.entry_price || !trade.exit_price) return 0
+    
     const entry = typeof trade.entry_price === 'number' ? trade.entry_price : parseFloat(trade.entry_price)
     const exit = typeof trade.exit_price === 'number' ? trade.exit_price : parseFloat(trade.exit_price)
-    const charges = typeof trade.charges === 'number' ? trade.charges : parseFloat(trade.charges)
+    const charges = typeof trade.charges === 'number' ? trade.charges : parseFloat(trade.charges || '0')
+    const quantity = trade.quantity || 0
+    const side = trade.side || 'BUY'
 
-    const grossPL = trade.side === 'BUY'
-      ? (exit - entry) * trade.quantity
-      : (entry - exit) * trade.quantity
+    const grossPL = side === 'BUY'
+      ? (exit - entry) * quantity
+      : (entry - exit) * quantity
     return grossPL - (Number.isFinite(charges) ? charges : 0)
   }
 
   const exportToCSV = () => {
     const headers = [
-      'Date', 'Symbol', 'Exchange', 'Instrument', 'Side', 
+      'Date', 'Type', 'Symbol', 'Exchange', 'Instrument', 'Side', 
       'Quantity', 'Entry Price', 'Exit Price', 'Charges', 'P&L', 'Notes'
     ]
     
     const csvContent = [
       headers.join(','),
       ...sortedTrades.map(trade => {
-        const pl = calculatePL(trade)
-        return [
-          trade.trade_date,
-          trade.symbol,
-          trade.exchange,
-          trade.instrument,
-          trade.side,
-          trade.quantity,
-          trade.entry_price,
-          trade.exit_price,
-          trade.charges,
-          pl.toFixed(2),
-          `"${trade.notes || ''}"`
-        ].join(',')
+        if (trade.type === 'no_trade_day') {
+          return [
+            trade.trade_date,
+            'No Trade Day',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            `"${trade.reason || ''}"`
+          ].join(',')
+        } else {
+          const pl = calculatePL(trade)
+          return [
+            trade.trade_date,
+            'Trade',
+            trade.symbol || '',
+            trade.exchange || '',
+            trade.instrument || '',
+            trade.side || '',
+            trade.quantity || '',
+            trade.entry_price || '',
+            trade.exit_price || '',
+            trade.charges || '',
+            pl.toFixed(2),
+            `"${trade.notes || ''}"`
+          ].join(',')
+        }
       })
     ].join('\n')
 
@@ -142,22 +171,25 @@ export function TradeHistory({ onEditTrade, refreshTrigger }: TradeHistoryProps)
     window.URL.revokeObjectURL(url)
   }
 
-  const deleteTrade = async (trade: Trade) => {
-    if (!confirm('Are you sure you want to delete this trade?')) return
+  const deleteTrade = async (item: Trade) => {
+    const itemType = item.type === 'no_trade_day' ? 'no-trade day' : 'trade'
+    if (!confirm(`Are you sure you want to delete this ${itemType}?`)) return
     
     try {
       if (!user) return
       
-      const response = await fetch(`/api/trades/${trade.id}`, {
+      const endpoint = item.type === 'no_trade_day' ? `/api/no-trade-days/${item.id}` : `/api/trades/${item.id}`
+      
+      const response = await fetch(endpoint, {
         method: 'DELETE',
         credentials: 'include',
       })
       
       if (response.ok) {
-        setTrades(prev => prev.filter(t => t.id !== trade.id))
+        setTrades(prev => prev.filter(t => t.id !== item.id))
       }
     } catch (error) {
-      console.error('Error deleting trade:', error)
+      console.error('Error deleting item:', error)
     }
   }
 
@@ -176,6 +208,13 @@ export function TradeHistory({ onEditTrade, refreshTrigger }: TradeHistoryProps)
           Trade History ({trades.length})
         </h2>
         <div className="flex gap-2">
+          <button
+            onClick={() => setShowInsights(!showInsights)}
+            className="flex items-center gap-2 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
+          >
+            <TrendingUp className="w-4 h-4" />
+            Insights
+          </button>
           <button
             onClick={() => setShowFilters(!showFilters)}
             className="flex items-center gap-2 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
@@ -258,6 +297,12 @@ export function TradeHistory({ onEditTrade, refreshTrigger }: TradeHistoryProps)
         </div>
       )}
 
+      {showInsights && streaks && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+          <StreakInsights streaks={streaks} />
+        </div>
+      )}
+
       {trades.length === 0 ? (
         <div className="text-center py-8 text-gray-500 dark:text-gray-400">
           No trades found. Add your first trade to get started.
@@ -273,6 +318,15 @@ export function TradeHistory({ onEditTrade, refreshTrigger }: TradeHistoryProps)
                 >
                   <div className="flex items-center gap-1">
                     Date
+                    <ArrowUpDown className="w-3 h-3" />
+                  </div>
+                </th>
+                <th 
+                  onClick={() => handleSort('type')}
+                  className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
+                  <div className="flex items-center gap-1">
+                    Type
                     <ArrowUpDown className="w-3 h-3" />
                   </div>
                 </th>
@@ -309,64 +363,104 @@ export function TradeHistory({ onEditTrade, refreshTrigger }: TradeHistoryProps)
               </tr>
             </thead>
             <tbody>
-              {sortedTrades.map((trade) => {
-                const pl = calculatePL(trade)
-                return (
-                  <tr key={trade.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">
-                    <td className="p-3 text-gray-900 dark:text-white">
-                      {new Date(trade.trade_date).toLocaleDateString()}
-                    </td>
-                    <td className="p-3 font-medium text-gray-900 dark:text-white">
-                      {trade.symbol}
-                    </td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">
-                      {trade.exchange}
-                    </td>
-                    <td className="p-3">
-                      <span className={cn(
-                        "inline-flex px-2 py-1 text-xs font-medium rounded",
-                        trade.side === 'BUY' 
-                          ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                          : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+              {sortedTrades.map((item) => {
+                if (item.type === 'no_trade_day') {
+                  return (
+                    <tr key={item.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 bg-orange-50 dark:bg-orange-900/20">
+                      <td className="p-3 text-gray-900 dark:text-white">
+                        {new Date(item.trade_date).toLocaleDateString()}
+                      </td>
+                      <td className="p-3">
+                        <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
+                          <Calendar className="w-3 h-3" />
+                          No Trade
+                        </span>
+                      </td>
+                      <td className="p-3 text-gray-500 dark:text-gray-400" colSpan={6}>
+                        {item.reason || 'No trades executed'}
+                        {item.auto_created && (
+                          <span className="ml-2 text-xs text-orange-600 dark:text-orange-400">(Auto-marked)</span>
+                        )}
+                      </td>
+                      <td className="p-3">
+                        <div className="flex gap-1">
+                          <button
+                            onClick={() => deleteTrade(item)}
+                            className="p-1 text-gray-600 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
+                            title="Delete no-trade day"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                } else {
+                  // Trade row
+                  const pl = calculatePL(item)
+                  return (
+                    <tr key={item.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">
+                      <td className="p-3 text-gray-900 dark:text-white">
+                        {new Date(item.trade_date).toLocaleDateString()}
+                      </td>
+                      <td className="p-3">
+                        <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                          <TrendingUp className="w-3 h-3" />
+                          Trade
+                        </span>
+                      </td>
+                      <td className="p-3 font-medium text-gray-900 dark:text-white">
+                        {item.symbol || ''}
+                      </td>
+                      <td className="p-3 text-gray-600 dark:text-gray-400">
+                        {item.exchange || ''}
+                      </td>
+                      <td className="p-3">
+                        <span className={cn(
+                          "inline-flex px-2 py-1 text-xs font-medium rounded",
+                          item.side === 'BUY' 
+                            ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                            : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+                        )}>
+                          {item.side || ''}
+                        </span>
+                      </td>
+                      <td className="p-3 text-right text-gray-900 dark:text-white">
+                        {item.quantity || ''}
+                      </td>
+                      <td className="p-3 text-right text-gray-900 dark:text-white">
+                        {item.entry_price ? Number(item.entry_price).toFixed(2) : ''}
+                      </td>
+                      <td className="p-3 text-right text-gray-900 dark:text-white">
+                        {item.exit_price ? Number(item.exit_price).toFixed(2) : ''}
+                      </td>
+                      <td className={cn(
+                        "p-3 text-right font-medium",
+                        pl > 0 ? "text-green-600 dark:text-green-400" : 
+                        pl < 0 ? "text-red-600 dark:text-red-400" : 
+                        "text-gray-600 dark:text-gray-400"
                       )}>
-                        {trade.side}
-                      </span>
-                    </td>
-                    <td className="p-3 text-right text-gray-900 dark:text-white">
-                      {trade.quantity}
-                    </td>
-                    <td className="p-3 text-right text-gray-900 dark:text-white">
-                      {Number(trade.entry_price).toFixed(2)}
-                    </td>
-                    <td className="p-3 text-right text-gray-900 dark:text-white">
-                      {Number(trade.exit_price).toFixed(2)}
-                    </td>
-                    <td className={cn(
-                      "p-3 text-right font-medium",
-                      pl > 0 ? "text-green-600 dark:text-green-400" : 
-                      pl < 0 ? "text-red-600 dark:text-red-400" : 
-                      "text-gray-600 dark:text-gray-400"
-                    )}>
-                      {pl > 0 ? '+' : ''}{pl.toFixed(2)}
-                    </td>
-                    <td className="p-3">
-                      <div className="flex gap-1">
-                        <button
-                          onClick={() => onEditTrade(trade)}
-                          className="p-1 text-gray-600 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => deleteTrade(trade)}
-                          className="p-1 text-gray-600 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                )
+                        {pl > 0 ? '+' : ''}{pl.toFixed(2)}
+                      </td>
+                      <td className="p-3">
+                        <div className="flex gap-1">
+                          <button
+                            onClick={() => onEditTrade(item)}
+                            className="p-1 text-gray-600 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => deleteTrade(item)}
+                            className="p-1 text-gray-600 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                }
               })}
             </tbody>
           </table>
