@@ -21,12 +21,22 @@ export async function POST(request: NextRequest) {
     const currentTimeInMinutes = currentHour * 60 + currentMinute
     const marketCloseTimeInMinutes = 15 * 60 + 30 // 3:30 PM = 15:30 = 930 minutes
 
-    // Check if it's after 3:30 PM
-    if (currentTimeInMinutes < marketCloseTimeInMinutes) {
+    // Get IST time (UTC+5:30)
+    const istTime = new Date(currentTime.getTime() + 5.5 * 60 * 60 * 1000)
+    const istHour = istTime.getHours()
+    const istMinute = istTime.getMinutes()
+    const istTimeInMinutes = istHour * 60 + istMinute
+
+    // Format times for display
+    const utcTimeStr = `${currentHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')} UTC`
+    const istTimeStr = `${istHour.toString().padStart(2, '0')}:${istMinute.toString().padStart(2, '0')} IST`
+
+    // Check if it's after 3:30 PM (using IST time for Indian market)
+    if (istTimeInMinutes < marketCloseTimeInMinutes) {
       return NextResponse.json({
         success: false,
-        message: 'Market has not closed yet. No-trade-day can only be marked after 3:30 PM.',
-        currentTime: `${currentHour}:${currentMinute.toString().padStart(2, '0')}`
+        message: 'Market has not closed yet. No-trade-day can only be marked after 3:30 PM IST.',
+        currentTime: `${istTimeStr} (${utcTimeStr})`
       })
     }
 
@@ -78,7 +88,7 @@ export async function POST(request: NextRequest) {
       success: true,
       message: 'No-trade-day marked successfully for today.',
       date: today,
-      time: `${currentHour}:${currentMinute.toString().padStart(2, '0')}`
+      time: `${istTimeStr} (${utcTimeStr})`
     })
 
   } catch (error) {
@@ -102,12 +112,22 @@ export async function GET(request: NextRequest) {
 
     const user = authResult.user
 
-    const today = new Date().toISOString().split('T')[0]
+    const today = new Date().toISOString().split('T')[0] // YYYY-MM-DD format
     const currentTime = new Date()
     const currentHour = currentTime.getHours()
     const currentMinute = currentTime.getMinutes()
     const currentTimeInMinutes = currentHour * 60 + currentMinute
-    const marketCloseTimeInMinutes = 15 * 60 + 30 // 3:30 PM
+    const marketCloseTimeInMinutes = 15 * 60 + 30 // 3:30 PM = 15:30 = 930 minutes
+
+    // Get IST time (UTC+5:30)
+    const istTime = new Date(currentTime.getTime() + 5.5 * 60 * 60 * 1000)
+    const istHour = istTime.getHours()
+    const istMinute = istTime.getMinutes()
+    const istTimeInMinutes = istHour * 60 + istMinute
+
+    // Format times for display
+    const utcTimeStr = `${currentHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')} UTC`
+    const istTimeStr = `${istHour.toString().padStart(2, '0')}:${istMinute.toString().padStart(2, '0')} IST`
 
     // Check if there are any trades for today
     const trades = await sql`
@@ -125,14 +145,14 @@ export async function GET(request: NextRequest) {
     `
 
     const hasNoTradeDay = existingNoTradeDay.length > 0
-    const afterMarketClose = currentTimeInMinutes >= marketCloseTimeInMinutes
+    const afterMarketClose = istTimeInMinutes >= marketCloseTimeInMinutes // Use IST time
     const isWeekend = currentTime.getDay() === 0 || currentTime.getDay() === 6
 
     return NextResponse.json({
       success: true,
       data: {
         date: today,
-        currentTime: `${currentHour}:${currentMinute.toString().padStart(2, '0')}`,
+        currentTime: `${istTimeStr} (${utcTimeStr})`,
         tradeCount,
         hasNoTradeDay,
         afterMarketClose,
@@ -145,7 +165,7 @@ export async function GET(request: NextRequest) {
           : tradeCount > 0
           ? `You have ${tradeCount} trade(s) today`
           : !afterMarketClose
-          ? 'Market has not closed yet (after 3:30 PM)'
+          ? 'Market has not closed yet (after 3:30 PM IST)'
           : 'Weekend - no-trade-day not applicable'
       }
     })
