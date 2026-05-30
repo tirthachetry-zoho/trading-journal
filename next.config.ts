@@ -16,6 +16,7 @@ github.api.token=${GITHUB_API_TOKEN:sdfsdfsdfdsfsdf}
 # Spring AI Settings
 # Groq OpenAI-compatible endpoint
 spring.ai.openai.base-url=https://api.groq.com/openai
+openapi.token=adadewerew34535345345345vfdfgdfge
 
 # Your Groq API key
 spring.ai.openai.api-key=${GROQ_API_KEY:sdfdsfsdfewrwerwerwerwerwerwewfw445}
