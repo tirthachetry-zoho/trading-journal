@@ -6,7 +6,6 @@ const nextConfig: NextConfig = {
 
 export default nextConfig;
 
-//adsasdasdasdasdas
 const nextConfig: NextConfig = {
   /* config options here */
 };
